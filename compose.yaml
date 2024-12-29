@@ -1,0 +1,6 @@
+services:
+  modbus_ws_adapter:
+    build: .
+    ports:
+      - "8765:8765"
+      - "8502:8502"

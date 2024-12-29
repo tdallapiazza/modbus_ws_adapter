@@ -53,6 +53,14 @@ sudo ./bin/python app.py
 ```
 Where ./bin is where your python venv executable is located. Note that we must run is as root to have access to raw TCP sockets.
 
+## Build and run with Docker
+Just issue the following command
+
+```bash
+docker compose up
+```
+The websocket server is listening on port *8765* and the modbus server is listening on port *8502*
+
 ## Notice
 
 This script implements just the strict minimum it is absolutely not robust agains clients failurs (wrong protocole or whatever can occure from clients) so it is absolutely not ready for production where we know clients do whatever they want....

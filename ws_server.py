@@ -60,7 +60,7 @@ class WsServer():
 
 
     def main(self):
-        with serve(self.handler, "localhost", 8765) as server:
+        with serve(self.handler, "0.0.0.0", 8765) as server:
             print("websocket server started")
             server.serve_forever()
             
