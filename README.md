@@ -20,7 +20,7 @@ The communication through websocket is fairly easy. The data are axchanges throu
 
 As an example, to write discrete inputs at address 2 and 3 to "1", the ws_client must send the following JSON data:
 
-{"type":"setDiscteteInputs", "address": 2, "value": [true, true]}
+{"type":"setDiscreteInputs", "address": 2, "value": [true, true]}
 
 The notification to the ws_clients are following the same protocole. When for instance a mb_client send a "write multiple coils" 
 from address 3 to 5 and put the values to "1 0 1" to the modbus server, the ws_clients get notified with the following JSON data:
