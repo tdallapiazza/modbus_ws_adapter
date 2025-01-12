@@ -59,7 +59,14 @@ Just issue the following command
 ```bash
 docker compose up
 ```
+
 The websocket server is listening on port *8765* and the modbus server is listening on port *8502*
+
+You can also try a working docker image with just issuing
+
+```bash
+docker run -d -p 8765:8765 -p 8502:8502 thomasdallapiazza/modbus_ws_proxy
+```
 
 ## Notice
 
