@@ -45,6 +45,13 @@ class WsServer():
                         update_ok = self.data_bank.set_coils(addr, value)
                         if not update_ok:
                             print("could not write values in data_bank")
+                    case "setInputRegisters":
+                        addr = event["address"]
+                        value = event["value"]
+                        print("updating input registers")
+                        update_ok = self.data_bank.set_input_registers(addr, value)
+                        if not update_ok:
+                            print("could not write values in data_bank")
                     case _:
                         print("Unknown action type")
         finally:
