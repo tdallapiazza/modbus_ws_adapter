@@ -34,3 +34,29 @@ class WsDataHandler(DataHandler):
             return DataHandler.Return(exp_code=EXP_NONE)
         else:
             return DataHandler.Return(exp_code=EXP_DATA_ADDRESS)
+    
+    # Override write_h_regs method
+    def write_h_regs(self, address, words_l, srv_info):
+        """Call by server for writing in the holding registers space
+
+        :param address: start address
+        :type address: int
+        :param words_l: list of word value to write
+        :type words_l: list
+        :param srv_info: some server info
+        :type srv_info: ModbusServer.ServerInfo
+        :rtype: Return
+        """
+        # write words to DataBank
+        update_ok = self.data_bank.set_holding_registers(address, words_l, srv_info)
+        # return DataStatus to server
+        if update_ok:
+            event = {
+                "type": "setHoldingRegister",
+                "address": address,
+                "value": words_l,
+            }
+            self.ws_server.notify_clients(json.dumps(event))
+            return DataHandler.Return(exp_code=EXP_NONE)
+        else:
+            return DataHandler.Return(exp_code=EXP_DATA_ADDRESS)

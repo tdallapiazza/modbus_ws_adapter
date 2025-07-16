@@ -68,6 +68,55 @@ You can also try a working docker image with just issuing
 docker run -d -p 8765:8765 -p 8502:8502 thomasdallapiazza/modbus_ws_proxy
 ```
 
+## Create an all in one executable
+Use pyinstaller to produce an all in one executable file (can be distributed).
+
+First install pyinstaller:
+
+```bash
+pip install pyinstaller
+```
+
+The run the pyinstaller once:
+
+```bash
+pyinstaller --onefile app.py
+```
+
+This will create a "app.spec" file together with a build and dist folder. Modify the app.spec file to include the icon:
+
+```
+exe = EXE(
+    pyz,
+    a.scripts,
+    a.binaries,
+    a.datas,
+    [],
+    name='app',
+    debug=False,
+    bootloader_ignore_signals=False,
+    strip=False,
+    upx=True,
+    upx_exclude=[],
+    runtime_tmpdir=None,
+    console=True,
+    disable_windowed_traceback=False,
+    argv_emulation=False,
+    target_arch=None,
+    codesign_identity=None,
+    entitlements_file=None,
+    icon='./icon.ico',
+)
+```
+
+Then run the pyinstaller once again but withe the app.spec file as a target:
+
+```bash
+pyinstaller app.spec
+```
+
+The executable can be found in the "dist" folder ready to be distributed.
+
 ## Notice
 
 This script implements just the strict minimum it is absolutely not robust agains clients failurs (wrong protocole or whatever can occure from clients) so it is absolutely not ready for production where we know clients do whatever they want....
