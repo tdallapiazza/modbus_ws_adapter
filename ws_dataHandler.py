@@ -52,7 +52,7 @@ class WsDataHandler(DataHandler):
         # return DataStatus to server
         if update_ok:
             event = {
-                "type": "setHoldingRegister",
+                "type": "setHoldingRegisters",
                 "address": address,
                 "value": words_l,
             }
