@@ -1,21 +1,40 @@
 #!/usr/bin/env python3
+"""Entry point: starts the Modbus TCP server and the WebSocket bridge."""
 
 import logging
-from ws_dataHandler import WsDataHandler
 
 from pyModbusTCP.server import ModbusServer
 
+from ws_data_handler import WsDataHandler
 
-# init logging
-logging.basicConfig()
-# logging setup
-logging.getLogger('pyModbusTCP.server').setLevel(logging.DEBUG)
+MODBUS_HOST = "0.0.0.0"
+MODBUS_PORT = 8502
+WS_HOST = "0.0.0.0"
+WS_PORT = 8765
 
-# start modbus server
-dataHandler = WsDataHandler()
-modbus_server = ModbusServer(host="0.0.0.0", port=8502, data_hdl=dataHandler, no_block=True)
-modbus_server.start()
-print("modbus server started.")
+logging.basicConfig(level=logging.INFO)
+logging.getLogger("pyModbusTCP.server").setLevel(logging.DEBUG)
 
-# now start the websocket
-dataHandler.ws_server.start()
+logger = logging.getLogger(__name__)
+
+
+def main() -> None:
+    data_handler = WsDataHandler(ws_host=WS_HOST, ws_port=WS_PORT)
+    modbus_server = ModbusServer(
+        host=MODBUS_HOST, port=MODBUS_PORT, data_hdl=data_handler, no_block=True
+    )
+
+    modbus_server.start()
+    logger.info("modbus server started on %s:%d", MODBUS_HOST, MODBUS_PORT)
+
+    try:
+        # Blocks the main thread until interrupted (Ctrl+C).
+        data_handler.ws_server.start()
+    except KeyboardInterrupt:
+        logger.info("shutting down")
+    finally:
+        modbus_server.stop()
+
+
+if __name__ == "__main__":
+    main()

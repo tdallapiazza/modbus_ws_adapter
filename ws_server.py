@@ -1,77 +1,104 @@
 #!/usr/bin/env python
+"""WebSocket server bridging browser clients to the Modbus DataBank.
+
+Browser clients simulate the "field side" of the device (discrete inputs,
+input registers) and can also force coils/holding registers directly. The
+Modbus master (PLC) reads/writes through the normal Modbus TCP port; any
+write it makes is relayed to browsers by WsDataHandler via notify_clients().
+"""
+
 import json
-import itertools
+import logging
+import threading
+
 from websockets.sync.server import serve
 from pyModbusTCP.server import DataBank
 
-class WsServer():
-    def __init__(self, data_bank):
+logger = logging.getLogger(__name__)
+
+
+class WsServer:
+    # Maps the "type" field of an incoming WS message to the DataBank setter
+    # it should call. Centralizing this avoids a long if/elif ladder and
+    # makes it trivial to add new writable spaces later.
+    _WRITE_HANDLERS = {
+        "setDiscreteInputs": "set_discrete_inputs",
+        "setCoils": "set_coils",
+        "setInputRegisters": "set_input_registers",
+        "setHoldingRegisters": "set_holding_registers",
+    }
+
+    def __init__(self, data_bank: DataBank, host: str = "0.0.0.0", port: int = 8765):
         """Constructor
 
-        Modbus server data handler constructor.
-
-        :param data_bank: a reference to custom DefaultDataBank
+        :param data_bank: a reference to the Modbus server's DataBank
         :type data_bank: DataBank
+        :param host: address to bind the WebSocket server to
+        :param port: port to bind the WebSocket server to
         """
-        # check data_bank type
         if not isinstance(data_bank, DataBank):
-            raise TypeError('data_bank arg is invalid')
-        # public
+            raise TypeError("data_bank arg is invalid")
+
         self.data_bank = data_bank
-        self.event = None
-        self.clients = set()
-    
-    def handler(self, websocket):
+        self.host = host
+        self.port = port
 
-        # add the client in the clients list
-        self.clients.add(websocket)
-        print("client added")
+        self._clients = set()
+        # notify_clients() runs on the Modbus server thread while handler()
+        # runs on a dedicated thread per client -> both touch self._clients,
+        # so access to it must be locked.
+        self._clients_lock = threading.Lock()
+
+    def handler(self, websocket) -> None:
+        with self._clients_lock:
+            self._clients.add(websocket)
+        logger.info("client connected (%d total)", len(self._clients))
+
         try:
-            for message in websocket:
-                # Parse a "setDiscreteInput" event from the browser.
-                event = json.loads(message)
-                match event["type"]:
-                    case "setDiscreteInputs":
-                        addr = event["address"]
-                        value = event["value"]
-                        print("updating discrete inputs")
-                        update_ok = self.data_bank.set_discrete_inputs(addr, value)
-                        if not update_ok:
-                            print("could not write values in data_bank")
-                    case "setCoils":
-                        addr = event["address"]
-                        value = event["value"]
-                        print("updating coils")
-                        update_ok = self.data_bank.set_coils(addr, value)
-                        if not update_ok:
-                            print("could not write values in data_bank")
-                    case "setInputRegisters":
-                        addr = event["address"]
-                        value = event["value"]
-                        print("updating input registers")
-                        update_ok = self.data_bank.set_input_registers(addr, value)
-                        if not update_ok:
-                            print("could not write values in data_bank")
-                    case _:
-                        print("Unknown action type")
+            for raw_message in websocket:
+                self._handle_message(raw_message)
         finally:
-            self.clients.remove(websocket)
-            print("client removed")
+            with self._clients_lock:
+                self._clients.discard(websocket)
+            logger.info("client disconnected (%d total)", len(self._clients))
 
+    def _handle_message(self, raw_message: str) -> None:
+        try:
+            event = json.loads(raw_message)
+            event_type = event["type"]
+            address = event["address"]
+            value = event["value"]
+        except (json.JSONDecodeError, KeyError) as exc:
+            logger.warning("ignoring malformed message %r: %s", raw_message, exc)
+            return
 
-    def notify_clients(self,msg):
-        print("Notifying clients")
-        for client in self.clients:
-            client.send(msg)
+        setter_name = self._WRITE_HANDLERS.get(event_type)
+        if setter_name is None:
+            logger.warning("unknown event type %r", event_type)
+            return
 
+        setter = getattr(self.data_bank, setter_name)
+        if not setter(address, value):
+            logger.error("failed to write %s at address %d", event_type, address)
 
+    def notify_clients(self, msg: str) -> None:
+        with self._clients_lock:
+            clients = list(self._clients)
 
-    def main(self):
-        with serve(self.handler, "0.0.0.0", 8765) as server:
-            print("websocket server started")
+        stale = []
+        for client in clients:
+            try:
+                client.send(msg)
+            except Exception:
+                logger.warning("failed to notify a client, dropping it", exc_info=True)
+                stale.append(client)
+
+        if stale:
+            with self._clients_lock:
+                for client in stale:
+                    self._clients.discard(client)
+
+    def start(self) -> None:
+        with serve(self.handler, self.host, self.port) as server:
+            logger.info("websocket server started on %s:%d", self.host, self.port)
             server.serve_forever()
-            
-
-    def start(self):
-        self.main()
-        
