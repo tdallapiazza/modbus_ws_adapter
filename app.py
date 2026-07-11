@@ -31,7 +31,7 @@ def main() -> None:
     modbus_server = ModbusServer(
         host=MODBUS_HOST, port=MODBUS_PORT, data_hdl=data_handler, no_block=True
     )
-
+    
     modbus_server.start()
     logger.info("modbus server started on %s:%d", MODBUS_HOST, MODBUS_PORT)
     logger.info("waiting for browser clients to connect and register devices...")

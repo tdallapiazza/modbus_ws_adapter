@@ -80,7 +80,13 @@ class WsServer:
 
         try:
             for raw_message in websocket:
-                self._handle_message(device.data_bank, raw_message)
+                try:
+                    self._handle_message(device.data_bank, raw_message)
+                except Exception:
+                    logger.exception(
+                        "error handling message %r, dropping it but keeping the connection open",
+                        raw_message,
+                    )
         finally:
             with self._clients_lock:
                 self._clients[unit_id].discard(websocket)
@@ -102,7 +108,9 @@ class WsServer:
             return
 
         setter = getattr(data_bank, setter_name)
-        if not setter(address, value):
+        if setter(address, value):
+            logger.info("%s address=%d value=%s -> OK", event_type, address, value)
+        else:
             logger.error("failed to write %s at address %d", event_type, address)
 
     def notify_clients(self, unit_id: int, msg: str) -> None:
@@ -122,7 +130,23 @@ class WsServer:
                 for client in stale:
                     self._clients[unit_id].discard(client)
 
+    def _disconnect_all_clients(self) -> None:
+        with self._clients_lock:
+            all_clients = [c for clients in self._clients.values() for c in clients]
+        if not all_clients:
+            return
+        logger.info("closing %d open connection(s) so the process can exit...", len(all_clients))
+        for client in all_clients:
+            try:
+                client.close()
+            except Exception:
+                logger.warning("error closing a client connection", exc_info=True)
+
     def start(self) -> None:
         with serve(self.handler, self.host, self.port) as server:
             logger.info("websocket server started on %s:%d", self.host, self.port)
-            server.serve_forever()
+            try:
+                server.serve_forever()
+            except KeyboardInterrupt:
+                self._disconnect_all_clients()
+                raise
