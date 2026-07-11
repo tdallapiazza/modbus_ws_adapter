@@ -1,26 +1,34 @@
 #!/usr/bin/env python
-"""WebSocket server bridging browser clients to the Modbus DataBank.
+"""WebSocket server bridging browser clients to per-device DataBanks.
 
-Browser clients simulate the "field side" of the device (discrete inputs,
-input registers) and can also force coils/holding registers directly. The
-Modbus master (PLC) reads/writes through the normal Modbus TCP port; any
-write it makes is relayed to browsers by WsDataHandler via notify_clients().
+Each simulated hardware model is a distinct Modbus unit id. A browser tab
+declares which model it represents (and creates it, if it doesn't exist
+yet) via the connection URL's query string, e.g.:
+
+    ws://host:8765/?unit_id=2
+    ws://host:8765/?unit_id=2&name=conveyor-belt   (optional friendly name)
+
+Multiple tabs can connect with the *same* unit_id to share/view one device;
+tabs with different unit_ids get fully isolated, independently-created
+devices.
 """
 
 import json
 import logging
 import threading
+from typing import Dict, Set
+from urllib.parse import parse_qs, urlparse
 
 from websockets.sync.server import serve
-from pyModbusTCP.server import DataBank
+
+from devices import DeviceRegistry
 
 logger = logging.getLogger(__name__)
 
 
 class WsServer:
     # Maps the "type" field of an incoming WS message to the DataBank setter
-    # it should call. Centralizing this avoids a long if/elif ladder and
-    # makes it trivial to add new writable spaces later.
+    # it should call.
     _WRITE_HANDLERS = {
         "setDiscreteInputs": "set_discrete_inputs",
         "setCoils": "set_coils",
@@ -28,41 +36,57 @@ class WsServer:
         "setHoldingRegisters": "set_holding_registers",
     }
 
-    def __init__(self, data_bank: DataBank, host: str = "0.0.0.0", port: int = 8765):
-        """Constructor
-
-        :param data_bank: a reference to the Modbus server's DataBank
-        :type data_bank: DataBank
-        :param host: address to bind the WebSocket server to
-        :param port: port to bind the WebSocket server to
-        """
-        if not isinstance(data_bank, DataBank):
-            raise TypeError("data_bank arg is invalid")
-
-        self.data_bank = data_bank
+    def __init__(self, registry: DeviceRegistry, host: str = "0.0.0.0", port: int = 8765):
+        self.registry = registry
         self.host = host
         self.port = port
 
-        self._clients = set()
+        # unit_id -> set of connected clients for that device.
+        self._clients: Dict[int, Set] = {}
         # notify_clients() runs on the Modbus server thread while handler()
         # runs on a dedicated thread per client -> both touch self._clients,
         # so access to it must be locked.
         self._clients_lock = threading.Lock()
 
+    @staticmethod
+    def _connection_params(path: str):
+        query = parse_qs(urlparse(path).query)
+        try:
+            unit_id = int(query["unit_id"][0])
+        except (KeyError, ValueError, IndexError):
+            return None, None
+        name = query.get("name", [None])[0]
+        return unit_id, name
+
     def handler(self, websocket) -> None:
+        unit_id, name = self._connection_params(websocket.request.path)
+        if unit_id is None:
+            logger.warning("rejecting connection, missing unit_id (path=%r)", websocket.request.path)
+            websocket.close(code=1008, reason="missing unit_id")
+            return
+
+        try:
+            # Creates the device (DataBank + plumbing) on first use for this
+            # unit_id; returns the existing one on subsequent connections.
+            device = self.registry.get_or_create(unit_id, name=name)
+        except ValueError as exc:
+            logger.warning("rejecting connection: %s", exc)
+            websocket.close(code=1008, reason=str(exc))
+            return
+
         with self._clients_lock:
-            self._clients.add(websocket)
-        logger.info("client connected (%d total)", len(self._clients))
+            self._clients.setdefault(unit_id, set()).add(websocket)
+        logger.info("client connected to %r (unit_id=%d)", device.name, unit_id)
 
         try:
             for raw_message in websocket:
-                self._handle_message(raw_message)
+                self._handle_message(device.data_bank, raw_message)
         finally:
             with self._clients_lock:
-                self._clients.discard(websocket)
-            logger.info("client disconnected (%d total)", len(self._clients))
+                self._clients[unit_id].discard(websocket)
+            logger.info("client disconnected from %r (unit_id=%d)", device.name, unit_id)
 
-    def _handle_message(self, raw_message: str) -> None:
+    def _handle_message(self, data_bank, raw_message: str) -> None:
         try:
             event = json.loads(raw_message)
             event_type = event["type"]
@@ -77,13 +101,13 @@ class WsServer:
             logger.warning("unknown event type %r", event_type)
             return
 
-        setter = getattr(self.data_bank, setter_name)
+        setter = getattr(data_bank, setter_name)
         if not setter(address, value):
             logger.error("failed to write %s at address %d", event_type, address)
 
-    def notify_clients(self, msg: str) -> None:
+    def notify_clients(self, unit_id: int, msg: str) -> None:
         with self._clients_lock:
-            clients = list(self._clients)
+            clients = list(self._clients.get(unit_id, ()))
 
         stale = []
         for client in clients:
@@ -96,7 +120,7 @@ class WsServer:
         if stale:
             with self._clients_lock:
                 for client in stale:
-                    self._clients.discard(client)
+                    self._clients[unit_id].discard(client)
 
     def start(self) -> None:
         with serve(self.handler, self.host, self.port) as server:
