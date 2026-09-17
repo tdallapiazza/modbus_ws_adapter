@@ -23,10 +23,22 @@ jobs:
         with:
           python-version: "3.x"
 
+      - name: Installer Cairo (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcairo2-dev pkg-config
+        shell: bash
+
+      - name: Installer Cairo (macOS)
+        if: runner.os == 'macOS'
+        run: brew install cairo pkg-config
+        shell: bash
+
       - name: Installer les dépendances
         run: |
           python -m pip install --upgrade pip
-          pip install pyinstaller pillow svglib reportlab
+          pip install pyinstaller pillow svglib reportlab pycairo rlPyCairo
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
         shell: bash
 
