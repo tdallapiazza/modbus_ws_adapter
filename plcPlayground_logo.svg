@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="6.5mm"
+   height="6.5mm"
+   viewBox="0 0 6.5 6.5"
+   version="1.1"
+   id="svg5"
+   inkscape:version="1.2 (dc2aedaf03, 2022-05-15)"
+   sodipodi:docname="plcPlayground_logo.svg"
+   inkscape:export-filename="..\..\Bureau\favicon\favicon-16x16.png"
+   inkscape:export-xdpi="62.523079"
+   inkscape:export-ydpi="62.523079"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview7"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     showgrid="false"
+     inkscape:zoom="16.684651"
+     inkscape:cx="12.286742"
+     inkscape:cy="12.586419"
+     inkscape:window-width="1920"
+     inkscape:window-height="1017"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs2" />
+  <g
+     inkscape:label="Calque 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <g
+       id="g3075"
+       transform="translate(-64.765999,-63.399731)">
+      <rect
+         style="fill:#7b7ba4;fill-opacity:1;stroke-width:0.499999;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:0"
+         id="rect485"
+         width="6.5"
+         height="6.5"
+         x="64.765999"
+         y="63.399731"
+         rx="1"
+         ry="1" />
+      <text
+         xml:space="preserve"
+         style="font-weight:bold;font-size:4.9389px;font-family:'Roboto Condensed';-inkscape-font-specification:'Roboto Condensed,  Bold';fill:#eeeeee;fill-opacity:1;stroke-width:0.499999;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:0"
+         x="65.388176"
+         y="68.485512"
+         id="text236"><tspan
+           sodipodi:role="line"
+           id="tspan234"
+           x="65.388176"
+           y="68.485512"
+           style="fill:#eeeeee;fill-opacity:1;stroke-width:0.5">P</tspan></text>
+      <text
+         xml:space="preserve"
+         style="font-weight:bold;font-size:4.9389px;font-family:'Roboto Condensed';-inkscape-font-specification:'Roboto Condensed,  Bold';fill:#eeeeee;fill-opacity:1;stroke-width:0.499999;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:0"
+         x="67.72258"
+         y="68.485512"
+         id="text240"><tspan
+           sodipodi:role="line"
+           id="tspan238"
+           x="67.72258"
+           y="68.485512"
+           style="fill:#eeeeee;fill-opacity:1;stroke-width:0.5">L</tspan></text>
+      <text
+         xml:space="preserve"
+         style="font-weight:bold;font-size:3.175px;font-family:'Roboto Condensed';-inkscape-font-specification:'Roboto Condensed,  Bold';fill:#eeeeee;fill-opacity:1;stroke-width:0.499999;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:0"
+         x="69.161171"
+         y="66.741142"
+         id="text381"><tspan
+           sodipodi:role="line"
+           id="tspan379"
+           x="69.161171"
+           y="66.741142"
+           style="font-size:3.175px;fill:#eeeeee;fill-opacity:1;stroke-width:0.5">2</tspan></text>
+    </g>
+  </g>
+</svg>
